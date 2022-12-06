@@ -39,8 +39,7 @@ jobs:
           .github/common/install-python.sh
 
       - name: Setup Intel OneAPI Compilers
-        uses: modflowpy/install-intelfortran-action@v1
-
+        uses: w-bonelli/install-intelfortran-action@ci-diagnose-msvc
 
       - name: Download examples for pytest runs
         run: |
