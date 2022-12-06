@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: '0 3 * * 3' # run at 3 AM UTC every Wednesday
   push:
-    branches: [ master ]
+    branches: [ master, "ci-diagnose*" ]
   pull_request:
     branches:
       - master
@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-2019]
     defaults:
       run:
         shell: bash
@@ -40,6 +40,7 @@ jobs:
 
       - name: Setup Intel OneAPI Compilers
         uses: modflowpy/install-intelfortran-action@v1
+
 
       - name: Download examples for pytest runs
         run: |
