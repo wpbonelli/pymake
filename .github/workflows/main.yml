@@ -6,6 +6,7 @@ on:
   push:
     branches: 
       - master
+      - ci-test
   pull_request:
     branches:
       - master
@@ -55,6 +56,10 @@ jobs:
         working-directory: ./autotest
         run: |
           pytest -v -n=auto --dist=loadfile -m="base or regression" --durations=0 --cov=pymake --cov-report=xml
+
+      - name: Setup tmate
+        if: runner.os == 'macOS'
+        uses: mxschmitt/action-tmate@v3
 
       - name: test on MacOS
         if: runner.os == 'macOS'
