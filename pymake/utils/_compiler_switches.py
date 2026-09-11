@@ -701,16 +701,24 @@ def _get_linker_flags(
     # set outgoing syslibs
     syslibs_out = []
 
-    # add option to statically link intel provided libraries on osx and linux
-    if sharedobject:
-        if osname in (
-            "darwin",
-            "linux",
-        ):
-            if compiler == fc:
-                if fc in (
-                    "ifort",
-                    "mpiifort",
+    # statically link intel provided libraries on osx and linux by default,
+    # for a shared object and an executable alike, so a built target does
+    # not depend on the intel runtime being installed on the machine that
+    # runs it. a caller that wants dynamic linking instead (the intel
+    # default) can ask for it explicitly with -shared-intel in syslibs.
+    if osname in (
+        "darwin",
+        "linux",
+    ):
+        if compiler == fc:
+            if fc in (
+                "ifort",
+                "mpiifort",
+            ):
+                requested = " ".join(syslibs) if syslibs else ""
+                if (
+                    "shared-intel" not in requested
+                    and "static-intel" not in requested
                 ):
                     syslibs_out.append("static-intel")
 

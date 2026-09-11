@@ -50,6 +50,7 @@ def build_apps(
     mesondir=None,
     exclude=None,
     clean=True,
+    syslibs=None,
 ):
     """Build all of the current targets or a subset of targets.
 
@@ -73,6 +74,10 @@ def build_apps(
         list of targets to exclude from build
     clean : bool
         boolean determining of final download should be removed
+    syslibs : str
+        user provided linker switches, applied to every target built in
+        this call (for example '-shared-intel' to opt out of the default
+        static intel runtime linking on osx and linux). (default is None)
 
     Returns
     -------
@@ -141,6 +146,8 @@ def build_apps(
         pmobj.appdir = appdir
     if verbose is not None:
         pmobj.verbose = verbose
+    if syslibs is not None:
+        pmobj.syslibs = syslibs
 
     for idt, target in enumerate(targets):
         start_downcomp = datetime.now()

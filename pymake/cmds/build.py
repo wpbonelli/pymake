@@ -22,6 +22,7 @@ DICT_KEYS = (
     "cc",
     "fflags",
     "cflags",
+    "syslibs",
     "double",
     "verbose",
     "zip",
@@ -78,6 +79,10 @@ Examples:
 
   Download and compile all programs in the ./temp subdirectory:
     $ {prog} : --appdir temp
+
+  Link mf2005 against the intel runtime dynamically instead of the
+  default static link on osx and linux:
+    $ {prog} mf2005 --syslibs='-shared-intel'
     """
 
     parser_obj = argparse.ArgumentParser(

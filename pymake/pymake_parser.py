@@ -169,12 +169,13 @@ def _get_standard_arg_dict():
         },
         "syslibs": {
             "tag": ("-sl", "--syslibs"),
-            "help": """Linker system libraries. Linker libraries should be
+            "help": """Linker system libraries and switches. Should be
                          enclosed in quotes and start with a blank space or
                          separated from the name (-sl or --syslibs) with a
-                         equal sign (-sl='-libgcc'). (default is None)""",
+                         equal sign (-sl='-static-intel'). (default is
+                         None)""",
             "default": None,
-            "choices": ["-lc", "-lm"],
+            "choices": None,
             "action": None,
         },
         "makefile": {

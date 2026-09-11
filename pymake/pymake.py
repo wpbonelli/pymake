@@ -591,13 +591,14 @@ class Pymake:
         else:
             self.sharedobject = False
 
-            # remove any shared compiler options
+            # remove any shared compiler options. -static-intel is not one:
+            # unlike -fPIC/-shared/-dll/-dynamiclib it is meaningful for an
+            # executable too, so a caller's choice of it is kept
             for flag in (
                 "-fPIC",
                 "-shared",
                 "-dll",
                 "-dynamiclib",
-                "-static-intel",
             ):
                 if self.fflags is not None:
                     self.fflags = self.fflags.replace(flag, "")
