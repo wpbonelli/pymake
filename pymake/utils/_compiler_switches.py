@@ -662,8 +662,7 @@ def _get_linker_flags(
         boolean indicating the caller is generating a meson build file.
         meson forces a mixed-language target to link dynamically against
         the intel runtime regardless of -static-intel, so extra flags are
-        needed to counteract that -- only for meson, since the classic
-        Makefile generator has no such override to counteract.
+        needed to counteract that.
 
     Returns
     -------
