@@ -634,6 +634,7 @@ def _get_linker_flags(
     sharedobject=False,
     osname=None,
     verbose=False,
+    meson=False,
 ):
     """Return the compiler to use for linking and a list of pymake and user
     specified linker switches (syslibs).
@@ -657,6 +658,12 @@ def _get_linker_flags(
         using sys.platform
     verbose : bool
         boolean for verbose output to terminal
+    meson : bool
+        boolean indicating the caller is generating a meson build file.
+        meson forces a mixed-language target to link dynamically against
+        the intel runtime regardless of -static-intel, so extra flags are
+        needed to counteract that -- only for meson, since the classic
+        Makefile generator has no such override to counteract.
 
     Returns
     -------
@@ -705,7 +712,8 @@ def _get_linker_flags(
     # statically link the intel runtime on osx/linux by default, exe or
     # shared alike. always appended: ifort honors the last of a repeated
     # static-intel/shared-intel, and a caller's syslibs land after ours,
-    # so -shared-intel overrides it.
+    # so -shared-intel overrides it. win32 is intentionally excluded --
+    # windows ifort uses different static-linking switches entirely.
     if osname in (
         "darwin",
         "linux",
@@ -716,21 +724,39 @@ def _get_linker_flags(
                 "mpiifort",
             ):
                 syslibs_out.append("static-intel")
-                mixed_language = fext is not None and cext is not None
-                if osname == "linux" and not sharedobject and mixed_language:
-                    # meson sets link_language for a mixed-language
-                    # target, which adds its own hardcoded dynamic
-                    # -lifcore/-limf, defeating -static-intel. force them
-                    # static ourselves; meson's --as-needed then drops
-                    # its now-redundant dynamic copies. skipped for
-                    # shared objects (libifcore.a isn't -fPIC), and
-                    # doesn't compose with a caller's -shared-intel here.
-                    syslibs_out += [
-                        "Wl,-Bstatic",
-                        "lifcore",
-                        "limf",
-                        "Wl,-Bdynamic",
-                    ]
+                if meson:
+                    mixed_language = fext is not None and cext is not None
+                    if mixed_language:
+                        if osname == "linux" and not sharedobject:
+                            # meson sets link_language for a
+                            # mixed-language target, which adds its own
+                            # hardcoded dynamic -lifcore/-limf, defeating
+                            # -static-intel. force them static ourselves;
+                            # meson's --as-needed then drops its
+                            # now-redundant dynamic copies. skipped for
+                            # shared objects (libifcore.a isn't -fPIC),
+                            # and doesn't compose with a caller's
+                            # -shared-intel here.
+                            syslibs_out += [
+                                "Wl,-Bstatic",
+                                "lifcore",
+                                "limf",
+                                "Wl,-Bdynamic",
+                            ]
+                        elif verbose:
+                            # known gap: the Bstatic/Bdynamic workaround
+                            # above is GNU-ld syntax and needs a
+                            # -fPIC-safe archive, so it can't be reused
+                            # as-is for a shared object or for darwin's
+                            # linker. meson's dynamic override therefore
+                            # still wins here despite -static-intel.
+                            print(
+                                f"warning: {target} is a mixed-language "
+                                "intel target built with meson; "
+                                "-static-intel will not fully apply "
+                                "(shared objects and darwin still link "
+                                "the intel runtime dynamically)"
+                            )
 
     # add linker switch for a shared object
     if sharedobject:

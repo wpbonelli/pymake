@@ -644,6 +644,7 @@ def _create_main_meson_build(
             srcfiles,
             sharedobject=sharedobject,
             verbose=verbose,
+            meson=True,
         )
     else:
         raise ValueError("linker language not defined")
