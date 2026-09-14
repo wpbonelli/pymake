@@ -625,6 +625,54 @@ def _get_c_flags(
     return flags
 
 
+def _intel_static_runtime_syslibs(
+    target, fc, compiler, fext, cext, sharedobject, osname, meson, verbose
+):
+    """Return syslibs for statically linking the intel runtime library.
+
+    win32 is intentionally excluded -- windows ifort uses different
+    static-linking switches entirely.
+
+    """
+    if osname not in ("darwin", "linux"):
+        return []
+    if compiler != fc or fc not in ("ifort", "mpiifort"):
+        return []
+
+    # always appended: ifort honors the last of a repeated
+    # static-intel/shared-intel, and a caller's syslibs land after ours,
+    # so -shared-intel overrides it.
+    syslibs_out = ["static-intel"]
+
+    if not meson:
+        return syslibs_out
+
+    mixed_language = fext is not None and cext is not None
+    if not mixed_language:
+        return syslibs_out
+
+    if osname == "linux" and not sharedobject:
+        # meson sets link_language for a mixed-language target, which adds
+        # its own hardcoded dynamic -lifcore/-limf, defeating -static-intel.
+        # force them static ourselves; meson's --as-needed then drops its
+        # now-redundant dynamic copies. skipped for shared objects
+        # (libifcore.a isn't -fPIC), and doesn't compose with a caller's
+        # -shared-intel here.
+        syslibs_out += ["Wl,-Bstatic", "lifcore", "limf", "Wl,-Bdynamic"]
+    elif verbose:
+        # known gap: the Bstatic/Bdynamic workaround above is GNU-ld syntax
+        # and needs a -fPIC-safe archive, so it can't be reused as-is for a
+        # shared object or for darwin's linker. meson's dynamic override
+        # therefore still wins here despite -static-intel.
+        print(
+            f"warning: {target} is a mixed-language intel target built "
+            "with meson; -static-intel will not fully apply (shared "
+            "objects and darwin still link the intel runtime dynamically)"
+        )
+
+    return syslibs_out
+
+
 def _get_linker_flags(
     target,
     fc,
@@ -709,53 +757,10 @@ def _get_linker_flags(
     syslibs_out = []
 
     # statically link the intel runtime on osx/linux by default, exe or
-    # shared alike. always appended: ifort honors the last of a repeated
-    # static-intel/shared-intel, and a caller's syslibs land after ours,
-    # so -shared-intel overrides it. win32 is intentionally excluded --
-    # windows ifort uses different static-linking switches entirely.
-    if osname in (
-        "darwin",
-        "linux",
-    ):
-        if compiler == fc:
-            if fc in (
-                "ifort",
-                "mpiifort",
-            ):
-                syslibs_out.append("static-intel")
-                if meson:
-                    mixed_language = fext is not None and cext is not None
-                    if mixed_language:
-                        if osname == "linux" and not sharedobject:
-                            # meson sets link_language for a
-                            # mixed-language target, which adds its own
-                            # hardcoded dynamic -lifcore/-limf, defeating
-                            # -static-intel. force them static ourselves;
-                            # meson's --as-needed then drops its
-                            # now-redundant dynamic copies. skipped for
-                            # shared objects (libifcore.a isn't -fPIC),
-                            # and doesn't compose with a caller's
-                            # -shared-intel here.
-                            syslibs_out += [
-                                "Wl,-Bstatic",
-                                "lifcore",
-                                "limf",
-                                "Wl,-Bdynamic",
-                            ]
-                        elif verbose:
-                            # known gap: the Bstatic/Bdynamic workaround
-                            # above is GNU-ld syntax and needs a
-                            # -fPIC-safe archive, so it can't be reused
-                            # as-is for a shared object or for darwin's
-                            # linker. meson's dynamic override therefore
-                            # still wins here despite -static-intel.
-                            print(
-                                f"warning: {target} is a mixed-language "
-                                "intel target built with meson; "
-                                "-static-intel will not fully apply "
-                                "(shared objects and darwin still link "
-                                "the intel runtime dynamically)"
-                            )
+    # shared alike
+    syslibs_out += _intel_static_runtime_syslibs(
+        target, fc, compiler, fext, cext, sharedobject, osname, meson, verbose
+    )
 
     # add linker switch for a shared object
     if sharedobject:
